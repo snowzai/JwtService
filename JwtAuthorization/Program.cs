@@ -4,10 +4,15 @@ using JwtAuthorization.Services.Implement;
 using JwtAuthorization.Services.Interfaces;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using JwtAuthorization.Repositories.Interfaces;
+using JwtAuthorization.Repositories.Implement;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.AddSingleton<IUserRepository, UserRepository>();
+builder.Services.AddSingleton<IUserTokenRepository, UserTokenRepository>();
+builder.Services.AddSingleton<IUserRoleRepository, UserRoleRepository>();
 builder.Services.AddSingleton<IJwtService, JwtService>();
 
 builder.Services.AddControllers();

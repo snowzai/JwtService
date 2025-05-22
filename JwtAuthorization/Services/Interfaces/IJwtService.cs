@@ -6,12 +6,10 @@ namespace JwtAuthorization.Services.Interfaces
 {
     public interface IJwtService
     {
-        Task<AuthResult> GenerateJwtToken(User user);
+        Task<AuthResult> GenerateJwtToken(User user, List<UserRole> userRoles);
 
         bool VerifyToken(TokenRequest tokenRequest, out string account);
 
         Task<AuthResult> VerifyAndGenerateToken(TokenRequest tokenRequest);
-
-        List<User> GetUsers();
     }
 }

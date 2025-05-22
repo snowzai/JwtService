@@ -1,6 +1,6 @@
 ﻿namespace JwtAuthorization.Models.Databases
 {
-    public class UserToken
+    public class UserToken : ModelBase
     {
         public long Id { get; set; }
 

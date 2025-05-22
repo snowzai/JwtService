@@ -2,6 +2,8 @@
 using JwtAuthorization.Models.Databases;
 using JwtAuthorization.Models.DTO.Request;
 using JwtAuthorization.Models.DTO.Response;
+using JwtAuthorization.Repositories.Implement;
+using JwtAuthorization.Repositories.Interfaces;
 using JwtAuthorization.Services.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -13,10 +15,14 @@ namespace JwtAuthorization.Controllers
     public class AuthController : Controller
     {
         private readonly IJwtService _jwtService;
+        private readonly IUserRepository _userRepository;
+        private readonly IUserRoleRepository _userRoleRepository;
 
-        public AuthController(IJwtService jwtService)
+        public AuthController(IJwtService jwtService, IUserRepository userRepository, IUserRoleRepository userRoleRepository)
         {
             _jwtService = jwtService;
+            _userRepository = userRepository;
+            _userRoleRepository = userRoleRepository;
         }
 
         /// <summary>
@@ -25,6 +31,7 @@ namespace JwtAuthorization.Controllers
         /// <param name="user">User資料</param>
         /// <returns>AuthResult</returns>
         [HttpPost]
+        [AllowAnonymous]
         [Route("Login")]
         public async Task<IActionResult> Login([FromBody] UserLoginRequest user)
         {
@@ -32,9 +39,7 @@ namespace JwtAuthorization.Controllers
             if (ModelState.IsValid)
             {
                 //檢核帳號密碼是否正確
-                User isCorrectUser = _jwtService.GetUsers()
-                    .Where(x => x.Password == user.Password & x.Account == user.Account)
-                    .FirstOrDefault();
+                User isCorrectUser = _userRepository.GetUser(account: user.Account, password: user.Password);
 
                 //若查無帳號資訊，則表示帳號密碼錯誤
                 if (isCorrectUser == null)
@@ -49,8 +54,10 @@ namespace JwtAuthorization.Controllers
                     });
                 }
 
+                List<UserRole> dbUserRole = _userRoleRepository.GetUserRoles(userId: isCorrectUser.Id);
+
                 //呼叫GenerateJwtToken方法，建立jwtToken
-                AuthResult jwtToken = await _jwtService.GenerateJwtToken(isCorrectUser);
+                AuthResult jwtToken = await _jwtService.GenerateJwtToken(user: isCorrectUser, userRoles: dbUserRole);
 
                 //回傳AuthResult
                 return Ok(jwtToken);

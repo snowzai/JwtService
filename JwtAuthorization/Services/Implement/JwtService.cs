@@ -4,6 +4,7 @@ using System.Text;
 using JwtAuthorization.Models.Configuration;
 using JwtAuthorization.Models.Databases;
 using JwtAuthorization.Models.DTO.Request;
+using JwtAuthorization.Repositories.Interfaces;
 using JwtAuthorization.Services.Interfaces;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -14,11 +15,18 @@ namespace JwtAuthorization.Services.Implement
     {
         private readonly JwtConfig _jwtConfig;
         private readonly TokenValidationParameters _tokenValidationParameters;
+        private readonly IUserRepository _userRepository;
+        private readonly IUserTokenRepository _userTokenRepository;
+        private readonly IUserRoleRepository _userRoleRepository;
 
-        public JwtService(IOptionsMonitor<JwtConfig> optionsMonitor, TokenValidationParameters tokenValidationParameters)
+        public JwtService(IOptionsMonitor<JwtConfig> optionsMonitor, TokenValidationParameters tokenValidationParameters,
+            IUserRepository userRepository, IUserTokenRepository userTokenRepository, IUserRoleRepository userRoleRepository)
         {
             _jwtConfig = optionsMonitor.CurrentValue;
             _tokenValidationParameters = tokenValidationParameters;
+            _userRepository = userRepository;
+            _userTokenRepository = userTokenRepository;
+            _userRoleRepository = userRoleRepository;
         }
 
         /// <summary>
@@ -26,7 +34,7 @@ namespace JwtAuthorization.Services.Implement
         /// </summary>
         /// <param name="user">User資料</param>
         /// <returns>AuthResult</returns>
-        public async Task<AuthResult> GenerateJwtToken(User user)
+        public async Task<AuthResult> GenerateJwtToken(User user, List<UserRole> userRoles)
         {
             #region 建立JWT Token
             //宣告JwtSecurityTokenHandler，用來建立token
@@ -35,15 +43,19 @@ namespace JwtAuthorization.Services.Implement
             //appsettings中JwtConfig的Secret值
             byte[] key = Encoding.ASCII.GetBytes(_jwtConfig.Secret);
 
+            List<Claim> claims = new List<Claim>();
+            claims.Add(new Claim(JwtRegisteredClaimNames.Iss, user.Account));
+            claims.Add(new Claim(JwtRegisteredClaimNames.Email, user.Email));
+            for (int index = 0; index < userRoles.Count; index++)
+            {
+                claims.Add(new Claim("roles", ((Role)userRoles[index].RoleId).ToString()));
+            }
+
             //建立JWT securityToken
             var token = new JwtSecurityToken(
                 //issuer: _jwtSettings.Issuer,
                 //audience: _jwtSettings.Audience,
-                claims: new List<Claim>
-                {
-                    new Claim(JwtRegisteredClaimNames.Iss, user.Account),
-                    new Claim(JwtRegisteredClaimNames.Email, user.Email)
-                },
+                claims: claims,
                 expires: DateTime.Now.AddMinutes(_jwtConfig.ExpirationMinutes),
                 signingCredentials: new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha512Signature)
             );
@@ -108,7 +120,7 @@ namespace JwtAuthorization.Services.Implement
                 }
 
                 //依參數的RefreshToken，查詢UserToken資料表中的資料
-                UserToken storedRefreshToken = this.GetUserTokens().Where(x => x.RefreshToken == tokenRequest.RefreshToken).FirstOrDefault();
+                UserToken storedRefreshToken = _userTokenRepository.GetUserToken(refreshToken: tokenRequest.RefreshToken);
 
                 if (storedRefreshToken == null)
                 {
@@ -150,10 +162,11 @@ namespace JwtAuthorization.Services.Implement
                 this.VerifyToken(tokenRequest, out string tokenAccount);
 
                 //依storedRefreshToken的Account，查詢出DB的User資料
-                User dbUser = this.GetUsers().FirstOrDefault(u => u.Account == tokenAccount);
+                User dbUser = _userRepository.GetUser(account: tokenAccount);
+                List<UserRole> dbUserRole = _userRoleRepository.GetUserRoles(userId: dbUser.Id);
 
                 //產生Jwt Token
-                return await GenerateJwtToken(dbUser);
+                return await GenerateJwtToken(user: dbUser, userRoles: dbUserRole);
             }
             catch (Exception ex)
             {
@@ -166,32 +179,5 @@ namespace JwtAuthorization.Services.Implement
                 };
             }
         }
-
-        #region Fake User Data
-        public List<User> GetUsers()
-        {
-            return new List<User> {
-                new User
-                {
-                    Account = "snowchoy",
-                    Password = "pass123",
-                    Email = "snowleong.w@gmail.com"
-                }
-            };
-        }
-
-        public List<UserToken> GetUserTokens()
-        {
-            return new List<UserToken> {
-                new UserToken
-                {
-                    Id = 1,
-                    Account = "snowchoy",
-                    Token = "eyJhbGciOiJodHRwOi8vd3d3LnczLm9yZy8yMDAxLzA0L3htbGRzaWctbW9yZSNobWFjLXNoYTUxMiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzbm93Y2hveSIsImVtYWlsIjoic25vd2xlb25nLndAZ21haWwuY29tIiwiZXhwIjoxNzQ3ODI2NjU5fQ.o69B5ulwJEO4YIn-cW4AnDP6HrJ1gU-5nRWSBp259505V6BYuZWLZT5GV_ie--9uuXb87sJ7wkyW-0kiXZgnEg",
-                    RefreshToken = "0f778f3d-8a08-46a8-b626-5c7f6c5fed4f"
-                },
-            };
-        }
-        #endregion
     }
 }
