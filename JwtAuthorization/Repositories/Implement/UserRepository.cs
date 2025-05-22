@@ -29,16 +29,26 @@ namespace JwtAuthorization.Repositories.Implement
         private List<User> AllUsers()
         {
             //fake data
-            List< User > users= new List<User> {
+            List<User> users = new List<User> {
                 new User
                 {
                     Id = 1,
-                    Account = "fakeacc",
-                    Password = "fakepass",
-                    Name = "Fake Acc",
-                    Email = "fakeacc@fake.com",
+                    Account = "snowchoy",
+                    Password = "pass123",
+                    Name = "Snow",
+                    Email = "snowleong.w@gmail.com",
                     CreatedAt = DateTime.Parse("2025-05-21"),
                     CreatedUserId = 0
+                },
+                new User
+                {
+                    Id = 2,
+                    Account = "abcdefg",
+                    Password = "pass123",
+                    Name = "Snow abcdefg",
+                    Email = "snowleong.w@gmail.com",
+                    CreatedAt = DateTime.Parse("2025-05-22"),
+                    CreatedUserId = 1
                 }
             };
 

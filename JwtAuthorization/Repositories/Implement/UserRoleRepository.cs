@@ -10,6 +10,11 @@ namespace JwtAuthorization.Repositories.Implement
 
         }
 
+        public List<UserRole> GetUserRoles()
+        {
+            return AllRoles();
+        }
+
         public List<UserRole> GetUserRoles(long userId)
         {
             return AllRoles().Where(r => r.UserId == userId).ToList();
@@ -36,6 +41,16 @@ namespace JwtAuthorization.Repositories.Implement
                     UserId = 1,
                     RoleId = 2,
                     IsAdmin = true,
+                    IsActive = true,
+                    CreatedAt = DateTime.Now,
+                    CreatedUserId = 1
+                },
+                new UserRole
+                {
+                    Id = 3,
+                    UserId = 2,
+                    RoleId = 1,
+                    IsAdmin = false,
                     IsActive = true,
                     CreatedAt = DateTime.Now,
                     CreatedUserId = 1
